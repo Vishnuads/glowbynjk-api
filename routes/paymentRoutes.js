@@ -1,0 +1,8 @@
+const express = require("express");
+const router = express.Router();
+const paymentController = require("../controller/paymentController");
+
+router.post("/initiate", paymentController.initiatePayment);
+router.post("/response", paymentController.paymentResponse);
+
+module.exports = router;
