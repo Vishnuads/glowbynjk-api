@@ -33,13 +33,15 @@ app.use(
   cors({
     origin: [
       "https://glowbynjk.com",
+      "https://admin.glowbynjk.com",
       "https://glowbynjk-test01.netlify.app",
       "http://localhost:5173",
       "http://localhost:5175",   
       "http://localhost:5174",
       "https://admin-glowbynjk.netlify.app",
       "https://glowbynjk001.netlify.app",
-      "https://glowbynjk0001.netlify.app"
+      "https://glowbynjk0001.netlify.app",
+      
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // 👈 add PATCH & OPTIONS
     credentials: true,
@@ -89,6 +91,7 @@ const io = new Server(server, {
  cors: {
  origin: [
       "https://glowbynjk.com",
+      "https://admin.glowbynjk.com",
       "http://localhost:5173",   // React dev (Vite)
       "http://localhost:3000",   // React dev (CRA)
       "http://localhost:5175",

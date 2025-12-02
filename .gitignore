@@ -13,3 +13,4 @@ build/
 .cache/
 .wwebjs_auth/
 .wwebjs_cache/
+ whatsapp.log
