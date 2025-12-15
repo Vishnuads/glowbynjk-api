@@ -32,6 +32,7 @@ database();
 app.use(
   cors({
     origin: [
+      "https://www.glowbynjk.com",
       "https://glowbynjk.com",
       "https://admin.glowbynjk.com",
       "https://glowbynjk-test01.netlify.app",
@@ -90,6 +91,7 @@ app.use('/uploads', express.static('uploads'));
 const io = new Server(server, {   
  cors: {
  origin: [
+       "https://www.glowbynjk.com",
       "https://glowbynjk.com",
       "https://admin.glowbynjk.com",
       "http://localhost:5173",   // React dev (Vite)
