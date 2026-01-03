@@ -23,7 +23,8 @@ const productSchema = new mongoose.Schema(
     description: { type: String },
     details: detailsSchema,
     selectedVideo : {type:String},
-    images: [{ type: String }],                      // filenames/URLs
+    images: [{ type: String }],      
+    couponeCode: {type: String},                // filenames/URLs
   },
   { timestamps: true }
 );

@@ -116,7 +116,7 @@ io.on("connection", (socket) => {
   });
 });
 
-
+                   
 
 
 
@@ -127,9 +127,9 @@ const subscriptionSchema = new mongoose.Schema({
     p256dh: String,
     auth: String,
   },
-});
+});     
 const Subscription = mongoose.model("Subscriptionnotification", subscriptionSchema);
-
+ 
 // 🔐 VAPID keys (generate once: npx web-push generate-vapid-keys)
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;

@@ -13,6 +13,7 @@ const cartSchema = new mongoose.Schema({
       netQuantity: String,
       prices: Number,
       quantity: Number,
+      couponeCode:String,
     },
   ],
   reminderSent: { type: Boolean, default: false }, // ✅ New flag

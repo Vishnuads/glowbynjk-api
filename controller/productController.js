@@ -27,7 +27,8 @@ const parseMaybeJSON = (val, fallback) => {
       keyBenefits,
       description,
       details,
-      selectedVideo
+      selectedVideo,
+      couponeCode
     } = req.body;
    const imagePaths = (req.files || []).map(f => `${f.path}`);
     // const imagePaths = (req.files || []).map(f => `${f.filename}`);
@@ -36,6 +37,7 @@ const parseMaybeJSON = (val, fallback) => {
       productName,
       title,
       selectedVideo,
+      couponeCode,
       prices: parseMaybeJSON(prices, []).map(n => Number(n)),
       netQuantity: parseMaybeJSON(netQuantity, []).map(n => String(n)),
       stockQuantity: Number(stockQuantity || 0),
@@ -129,6 +131,7 @@ const getProducts = async (req, res) => {
       productName,
       title,
       selectedVideo,
+      couponeCode,
       prices,
       netQuantity,
       stockQuantity,
@@ -145,9 +148,10 @@ const getProducts = async (req, res) => {
    const added = (req.files || []).map(f => `${f.path}`);
     // const added = (req.files || []).map(f => `/public/products/${f.filename}`);
 
-    existing.productName = productName ?? existing.productName;
+    existing.productName = productName ?? existing.productName;   
     existing.title = title ?? existing.title;
     existing.selectedVideo = selectedVideo ?? existing,selectedVideo;
+    existing.couponeCode = couponeCode ?? existing,couponeCode;
     existing.prices = prices ? parseMaybeJSON(prices, existing.prices).map(n => Number(n)) : existing.prices;
     existing.netQuantity = netQuantity ? parseMaybeJSON(netQuantity, existing.netQuantity).map(n => String(n)) : existing.netQuantity;
     existing.stockQuantity = (stockQuantity !== undefined) ? Number(stockQuantity) : existing.stockQuantity;

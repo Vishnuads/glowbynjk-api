@@ -36,7 +36,6 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.9",
-    "nodemon": "^3.1.10",
     "path": "^0.12.7",
     "pdfkit": "^0.17.2",
     "pdfkit-table": "^0.1.99",
@@ -55,5 +54,8 @@
     "winston": "^3.18.3",
     "wordpress-hash-node": "^1.0.0",
     "wwebjs-mongo": "^1.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
   }
 }
