@@ -80,7 +80,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
-
+        
 // ✅ Static folder
 // app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));

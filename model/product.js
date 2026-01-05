@@ -20,11 +20,12 @@ const productSchema = new mongoose.Schema(
     status: { type: String },                        // "New" etc (optional)
     tags: [{ type: String }],                        // react-select tags (values)
     keyBenefits: [{ type: String }],
-    description: { type: String },
+    description: { type: String },     
     details: detailsSchema,
     selectedVideo : {type:String},
     images: [{ type: String }],      
-    couponeCode: {type: String},                // filenames/URLs
+    couponeCode: [{ type: String }],
+    // couponeCode: {type: String},                // filenames/URLs
   },
   { timestamps: true }
 );

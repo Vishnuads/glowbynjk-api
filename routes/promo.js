@@ -20,6 +20,10 @@ router.delete("/admin/coupon/:id", auth, promoController.deleteCoupon);
 // user endpoints
 router.post("/coupon/validate", auth, promoController.validateCoupon);
 router.post("/coupon/redeem", auth, promoController.redeemCoupon);
+router.get("/coupon/redeem",  promoController.getAllCouponUsers);
+router.delete("/coupon/users/:id",  promoController.deleteCouponUsageById);
+
+
 
 router.post("/giftcard/validate", promoController.validateGiftCard); // public validate (no auth needed)
 router.post("/giftcard/redeem", auth,  promoController.redeemGiftCard);

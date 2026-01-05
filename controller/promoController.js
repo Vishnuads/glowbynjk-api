@@ -2,6 +2,7 @@
 const Coupon = require("../model/Coupon");
 const GiftCard = require("../model/GiftCard");
 const mongoose = require("mongoose");
+const UserCouponUsage = require("../model/UserCouponUsage");
 
 function genCode(prefix = "", length = 8) {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -198,59 +199,144 @@ exports.validateCoupon = async (req, res) => {
 // };
 
 
+// exports.redeemCoupon = async (req, res) => {
+//   try {
+//     const { code, cartTotal } = req.body;
+
+//     // ✅ ensure code uppercase
+//     const coupon = await Coupon.findOne({ code: code.toUpperCase(), active: true });
+//     if (!coupon) return res.status(404).json({ error: "Invalid or inactive coupon" });
+
+//     // ✅ expiration
+//     if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+//       return res.status(400).json({ error: "Coupon expired" });
+//     }
+
+//     // ✅ cast userId to ObjectId
+//     if (!req.user || !req.user._id) {
+//       return res.status(401).json({ error: "User not found in token" });
+//     }
+//     const userId = new mongoose.Types.ObjectId(req.user._id);
+
+//     // ✅ usage checks
+//     if (coupon.usedBy.some(id => id.equals(userId))) {
+//       return res.status(400).json({ error: "You have already used this coupon" });
+//     }
+//     if (coupon.usageLimit <= (coupon.usedBy?.length || 0)) {
+//       return res.status(400).json({ error: "Coupon usage limit reached" });
+//     }
+//     if (cartTotal < coupon.minPurchase) {
+//       return res.status(400).json({ error: `Minimum purchase ₹${coupon.minPurchase} required` });
+//     }
+//     // ✅ calculate discount
+//     let discount = 0;
+//     if (coupon.type === "fixed") discount = coupon.value;
+//     else if (coupon.type === "percentage") {
+//       discount = (cartTotal * coupon.value) / 100;
+//       if (coupon.maxDiscount) discount = Math.min(discount, coupon.maxDiscount);
+//     }
+//     discount = Math.min(discount, cartTotal);
+
+//     // ✅ persist usage
+//     coupon.usedBy.push(userId);
+//     await coupon.save();
+
+//     res.json({
+//       success: true,
+//       discount,
+//       finalTotal: cartTotal - discount,
+//       coupon
+//     });
+//   } catch (err) {
+//     console.error("Redeem error:", err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// };
+
+
+
 exports.redeemCoupon = async (req, res) => {
   try {
     const { code, cartTotal } = req.body;
 
-    // ✅ ensure code uppercase
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), active: true });
-    if (!coupon) return res.status(404).json({ error: "Invalid or inactive coupon" });
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
 
-    // ✅ expiration
+    const userId = req.user._id;
+
+    // 🔒 GLOBAL CHECK (MOST IMPORTANT)
+    const alreadyUsed = await UserCouponUsage.findOne({ userId });
+
+    if (alreadyUsed) {
+      return res.status(400).json({
+        error: "You have already used a coupon. Only one coupon is allowed.",
+      });
+    }
+
+    // ✅ Find coupon
+    const coupon = await Coupon.findOne({
+      code: code.toUpperCase(),
+      active: true,
+    });
+
+    if (!coupon) {
+      return res.status(404).json({ error: "Invalid or inactive coupon" });
+    }
+
+        if (coupon.usageLimit <= (coupon.usedBy?.length || 0)) {
+      return res.status(400).json({ error: "Coupon usage limit reached" });
+    }
+
+    // ⏰ Expiry check
     if (coupon.expiresAt && coupon.expiresAt < new Date()) {
       return res.status(400).json({ error: "Coupon expired" });
     }
-
-    // ✅ cast userId to ObjectId
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ error: "User not found in token" });
-    }
-    const userId = new mongoose.Types.ObjectId(req.user._id);
-
-    // ✅ usage checks
-    if (coupon.usedBy.some(id => id.equals(userId))) {
-      return res.status(400).json({ error: "You have already used this coupon" });
-    }
-    if (coupon.usageLimit <= (coupon.usedBy?.length || 0)) {
-      return res.status(400).json({ error: "Coupon usage limit reached" });
-    }
+ 
+    // 💰 Min purchase check
     if (cartTotal < coupon.minPurchase) {
-      return res.status(400).json({ error: `Minimum purchase ₹${coupon.minPurchase} required` });
+      return res.status(400).json({
+        error: `Minimum purchase ₹${coupon.minPurchase} required`,
+      });
     }
-    // ✅ calculate discount
+
+    // 💸 Discount calculation
     let discount = 0;
-    if (coupon.type === "fixed") discount = coupon.value;
-    else if (coupon.type === "percentage") {
+
+    if (coupon.type === "fixed") {
+      discount = coupon.value;
+    } else {
       discount = (cartTotal * coupon.value) / 100;
-      if (coupon.maxDiscount) discount = Math.min(discount, coupon.maxDiscount);
+      if (coupon.maxDiscount) {
+        discount = Math.min(discount, coupon.maxDiscount);
+      }
     }
+
     discount = Math.min(discount, cartTotal);
 
-    // ✅ persist usage
+    // ✅ SAVE GLOBAL USAGE (BLOCKS FUTURE COUPONS)
+    await UserCouponUsage.create({
+      userId,
+      couponCode: coupon.code,
+    });
+
+    // (Optional analytics only)
     coupon.usedBy.push(userId);
     await coupon.save();
 
-    res.json({
+    return res.json({
       success: true,
       discount,
       finalTotal: cartTotal - discount,
-      coupon
+      couponCode: coupon.code,
     });
+
   } catch (err) {
     console.error("Redeem error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 
 exports.validateGiftCard = async (req, res) => {
@@ -339,5 +425,50 @@ exports.deleteGift =  async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Delete failed" });
+  }
+};
+
+
+
+
+// controllers/couponUsageController.js
+
+exports.getAllCouponUsers = async (req, res) => {
+  try {
+    const usages = await UserCouponUsage.find()
+      .populate("userId", "firstName lastName email ") // adjust user fields
+      .sort({ usedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: usages.length,
+      data: usages,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+
+
+exports.deleteCouponUsageById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await UserCouponUsage.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Coupon usage not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Coupon usage deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

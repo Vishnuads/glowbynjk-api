@@ -37,16 +37,17 @@ const parseMaybeJSON = (val, fallback) => {
       productName,
       title,
       selectedVideo,
-      couponeCode,
+      // couponeCode,
       prices: parseMaybeJSON(prices, []).map(n => Number(n)),
       netQuantity: parseMaybeJSON(netQuantity, []).map(n => String(n)),
       stockQuantity: Number(stockQuantity || 0),
       status,
       tags: parseMaybeJSON(tags, []),
       keyBenefits: parseMaybeJSON(keyBenefits, []),
+      couponeCode: parseMaybeJSON(couponeCode, []),
       description,
       details: parseMaybeJSON(details, {}),
-      images: imagePaths
+      images: imagePaths   
     });
 
     res.status(201).json({ success: true, data: doc });
@@ -151,13 +152,14 @@ const getProducts = async (req, res) => {
     existing.productName = productName ?? existing.productName;   
     existing.title = title ?? existing.title;
     existing.selectedVideo = selectedVideo ?? existing,selectedVideo;
-    existing.couponeCode = couponeCode ?? existing,couponeCode;
+    // existing.couponeCode = couponeCode ?? existing,couponeCode;
     existing.prices = prices ? parseMaybeJSON(prices, existing.prices).map(n => Number(n)) : existing.prices;
     existing.netQuantity = netQuantity ? parseMaybeJSON(netQuantity, existing.netQuantity).map(n => String(n)) : existing.netQuantity;
     existing.stockQuantity = (stockQuantity !== undefined) ? Number(stockQuantity) : existing.stockQuantity;
     existing.status = status ?? existing.status;
     existing.tags = tags ? parseMaybeJSON(tags, existing.tags) : existing.tags;
     existing.keyBenefits = keyBenefits ? parseMaybeJSON(keyBenefits, existing.keyBenefits) : existing.keyBenefits;
+    existing.couponeCode = couponeCode ? parseMaybeJSON(couponeCode, existing.couponeCode) : existing.couponeCode;
     existing.description = description ?? existing.description;
     existing.details = details ? parseMaybeJSON(details, existing.details) : existing.details;
     existing.images = [...keep, ...added];
