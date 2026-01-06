@@ -265,88 +265,537 @@ function decryptCCAVenue(encText) {
 // ✅ 1. PLACE ORDER — Generate encrypted data for CCAvenue
 // =========================================================
 
- const placeOrderAfterCCAvenue = async (req, res) => {
+
+//original code
+//  const placeOrderAfterCCAvenue = async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       addressId,
+//       guestAddress,
+//       cartItems,
+//       totalAmount,
+//       paymentMethod,
+//       discountAmount,
+//       giftUsedAmount,
+//       rewardPoints
+//     } = req.body;
+
+//     // ✅ Generate unique order number
+//     const orderNumber = `${Math.floor(1000 + Math.random() * 9000)}`;
+//     const redirectUrl = `${process.env.BACKEND_URL}/api/ccav-response`; 
+//     const cancelUrl = `${process.env.BACKEND_URL}/api/ccav-response`;
+
+//     // ----------------------------------------
+//     // 1️⃣ Prepare billing & shipping details
+//     // ----------------------------------------
+//     let billing = {};
+//     let shipping = {};
+
+//     if (userId && addressId) {
+//       const userAddress = await Address.findById(addressId);
+//       if (!userAddress)
+//         return res.status(400).json({ message: "Address not found" });
+
+//       billing = userAddress.billing || {};
+//       shipping =
+//         userAddress.shipToDifferentAddress && userAddress.shipping
+//           ? userAddress.shipping
+//           : billing;
+//     } else if (guestAddress) {
+//       billing = guestAddress.billing || {};
+//       shipping =
+//         guestAddress.shipToDifferentAddress && guestAddress.shipping
+//           ? guestAddress.shipping
+//           : billing;
+//     } else {
+//       return res.status(400).json({ message: "Address information missing" });
+//     }
+
+//     // ----------------------------------------
+//     // 2️⃣ Encode merchant_param1 as Base64 JSON
+//     // ----------------------------------------
+//     const merchantData = {
+//       userId,
+//       addressId,
+//       guestAddress,
+//       cartItems,
+//       totalAmount,
+//       paymentMethod,
+//       discountAmount,
+//       giftUsedAmount,
+//       rewardPoints,
+//       orderNumber
+//     };
+//     const merchant_param1 = Buffer.from(
+//       JSON.stringify(merchantData)
+//     ).toString("base64");
+
+//     // ----------------------------------------
+//     // 3️⃣ Prepare full CCAvenue data
+//     // ----------------------------------------
+//     const ccavData = {
+//       merchant_id: process.env.CCAVENUE_MERCHANT_ID,
+//       order_id: orderNumber,
+//       currency: "INR",
+//       amount: totalAmount.toFixed(2),
+//       redirect_url: redirectUrl,
+//       cancel_url: cancelUrl,
+//       language: "EN",
+//       merchant_param1: merchant_param1,
+
+//       // Billing info
+//       billing_name: `${billing.firstName || ""} ${billing.lastName || ""}`.trim(),
+//       billing_address: [billing.streetAddress, billing.apartment]
+//         .filter(Boolean)
+//         .join(", "),
+//       billing_city: billing.city || "",
+//       billing_state: billing.state || "",
+//       billing_zip: billing.pincode || "",
+//       billing_country: "India",
+//       billing_tel: billing.phone || "",
+//       billing_email: billing.email || "",
+
+//       // Shipping info
+//       delivery_name: `${shipping.firstName || ""} ${shipping.lastName || ""}`.trim(),
+//       delivery_address: [shipping.streetAddress, shipping.apartment]
+//         .filter(Boolean)
+//         .join(", "),
+//       delivery_city: shipping.city || "",
+//       delivery_state: shipping.state || "",
+//       delivery_zip: shipping.pincode || "",
+//       delivery_country: "India",
+//       delivery_tel: shipping.phone || billing.phone || "",
+//       delivery_email: shipping.email || billing.email || ""
+//     };
+
+//     // ----------------------------------------
+//     // 4️⃣ Encrypt data with AES
+//     // ----------------------------------------
+//     const plainText = Object.entries(ccavData)
+//       .map(([key, value]) => `${key}=${value}`)
+//       .join("&");
+//     const encRequest = encryptCCAVenue(plainText);
+
+//     // ----------------------------------------
+//     // 5️⃣ Send encrypted response to frontend
+//     // ----------------------------------------
+//     return res.status(200).json({
+//       success: true,
+//       orderId: orderNumber,
+//       encRequest, // 🔑 frontend uses this for hidden input
+//       accessCode: process.env.CCAVENUE_ACCESS_CODE // From .env
+//     });
+//   } catch (error) {
+//     console.error("CCAvenue Checkout Init Error:", error);
+//     res.status(500).json({ message: "Failed to initialize CCAvenue payment" });
+//   }
+// };
+
+
+
+// const ccavResponse = async (req, res) => {
+//   try {
+//     const encResp = req.body.encResp;
+//     const decrypted = decryptCCAVenue(encResp);
+
+//     // ===== Parse CCAvenue response =====
+//     const response = Object.fromEntries(
+//       decrypted.split("&").map(p => p.split("="))
+//     );
+//     const paymentStatusRaw = response.order_status; // Success / Failure / Aborted
+//     const paymentId = response.tracking_id || response.bank_ref_no || null;
+//     // const orderNumber = Math.floor(1000 + Math.random() * 9000);
+    
+//     // ===== Decode merchant_param1 =====
+//     let meta = {};
+//     try {
+//       const decoded = Buffer.from(response.merchant_param1, "base64").toString("utf8");
+//       meta = JSON.parse(decoded);
+//     } catch (err) {
+//       console.error("❌ merchant_param1 JSON parse failed:", err);
+//     }
+
+//     // ===== Normalize payment status =====
+//     const paymentStatusMap = { Success: "Success", Failure: "Failed", Aborted: "Cancelled" };
+//     const paymentStatus = paymentStatusMap[paymentStatusRaw] || "Pending";
+
+//     const orderStatusMap = { Success: "Processing", Failed: "Pending", Cancelled: "Cancelled" };
+//     const status = orderStatusMap[paymentStatus] || "Pending";
+
+//     // ===== CREATE ORDER =====
+//     const newOrder = new Order({
+//        orderNumber : meta.orderNumber, 
+//       invoiceNumber: await generateInvoiceNumber(),
+//       userId: meta.userId || null,
+//       addressId: meta.addressId || null,
+//       guestAddress: meta.guestAddress || null,
+//       cartItems: meta.cartItems || [],
+//       totalAmount: meta.totalAmount || 0,
+//       paymentMethod: meta.paymentMethod || "CCAvenue",
+//       discountAmount: meta.discountAmount || 0,
+//       giftUsedAmount: meta.giftUsedAmount || 0,
+//       rewardPoints: meta.rewardPoints || 0,
+//       paymentStatus,
+//       paymentId,
+//       paymentDetails: response,
+//       status
+//     });
+
+//     const savedOrder = await newOrder.save();
+//     console.log(`✅ Order saved: ${savedOrder._id}, paymentStatus: ${paymentStatus}, status: ${status}`);
+
+//        // 🟢 ===== UPDATE PRODUCT STOCK AFTER SUCCESSFUL PAYMENT =====
+//     if (paymentStatus === "Success" && savedOrder.cartItems && savedOrder.cartItems.length > 0) {
+//   for (const item of savedOrder.cartItems) {
+//     try {
+//       const product = await Product.findById(item.productId);
+
+//       if (product) {
+//         // 🟢 Check stock availability
+//         if (product.stockQuantity >= item.quantity) {
+//           // Update both stock and used quantity
+//           product.stockQuantity -= item.quantity;
+//           product.usedQuantity += item.quantity;
+
+//           // If stock is zero, mark status as Out of Stock
+//           if (product.stockQuantity <= 0) {
+//             product.stockQuantity = 0;
+//             product.status = "Out of Stock";
+//           }
+
+//           await product.save();
+
+//           console.log(`✅ Updated stock for ${product.title}: 
+//               Remaining stock = ${product.stockQuantity}, 
+//               Used = ${product.usedQuantity}`);
+//         } else {
+//           console.warn(`⚠️ Not enough stock for ${product.title} 
+//               (requested: ${item.quantity}, available: ${product.stockQuantity})`);
+//         }
+//       } else {
+//         console.warn(`⚠️ Product not found for ID: ${item.productId}`);
+//       }
+//     } catch (err) {
+//       console.error(`❌ Error updating stock for product ${item.productId}:`, err);
+//     }
+//   }
+// }
+
+
+//     // ===== Admin dashboard notification via Socket.IO =====
+//     const io = req.app.get("io");
+//     io.emit("newOrder", {
+//       orderNumber: savedOrder.orderNumber,
+//       invoiceNumber: savedOrder.invoiceNumber,
+//       totalAmount: savedOrder.totalAmount,
+//       paymentStatus,
+//       userId: savedOrder.userId,
+//       createdAt: savedOrder.createdAt,
+//     });
+
+//     // ===== BILLING & SHIPPING =====
+//     let billing = {};
+//     let shipping = {};
+
+//     // 1️⃣ Logged-in user
+//     if (savedOrder.addressId) {
+//       const address = await Address.findById(savedOrder.addressId).lean();
+//       if (address) {
+//         billing = { ...(address.billing || {}) };
+//         shipping = { ...(address.shipping || billing) }; // fallback
+//       }
+//     }
+
+//     // 2️⃣ Guest user fallback (only if empty)
+//     if (savedOrder.guestAddress) {
+//       const guest = savedOrder.guestAddress;
+//       if (!billing || Object.keys(billing).length === 0) {
+//         billing = { ...(guest.billing || {}) };
+//       }
+//       if (!shipping || Object.keys(shipping).length === 0) {
+//         shipping = { ...(guest.shipping || billing) }; // fallback
+//       }
+//     }
+
+//     billing = billing || {};
+//     shipping = shipping || {};
+
+//     // Merge into order for PDF/email
+//     const order = { ...savedOrder.toObject(), billing, shipping };
+
+//     console.log("Billing Address:", billing);
+//     console.log("Shipping Address:", shipping);
+
+//     // ===== CUSTOMER EMAIL =====
+//     let customerEmail = "";
+//     if (savedOrder.userId) {
+//       const user = await User.findById(savedOrder.userId);
+//       if (user) customerEmail = user.email || "";
+//     } else if (savedOrder.guestAddress) {
+//       customerEmail = billing.email || shipping.email || "";
+//     }
+
+//     // ===== SEND EMAIL =====
+//     if (paymentStatus === "Success" && customerEmail) {
+//       try {
+//         await sendOrderEmail(customerEmail, order);
+//         console.log(`📧 Invoice email sent to ${customerEmail}`);
+//       } catch (emailErr) {
+//         console.error("❌ Error sending invoice email:", emailErr);
+//       }
+//     } else {
+//       console.warn("⚠️ Skipping email — missing customer email or payment not successful");
+//     }
+
+//     // ===== REWARD POINTS & CART CLEAR =====
+//     if (paymentStatus === "Success") {
+//     if (savedOrder.userId) {
+//       const user = await User.findById(savedOrder.userId);
+//       if (user) {
+//         // Redeem points
+//         const pointsNeededToRedeem = 10000;
+//         const redeemValue = 500; // rupees
+//         if (user.rewardPoints >= pointsNeededToRedeem) {
+//           const pointsPerRupee = redeemValue / pointsNeededToRedeem;
+//           const amountToRedeem = Math.floor(user.rewardPoints * pointsPerRupee);
+//           user.rewardPoints = 0;
+//           await user.save();
+//           console.log(`Redeemed ₹${amountToRedeem} for ${user.email}`);
+//         }
+
+//         // Earn points
+//         const pointsEarned = Math.floor(savedOrder.totalAmount / 1000) * 10;
+//         if (pointsEarned > 0) {
+//           user.rewardPoints += pointsEarned;
+//           await user.save();
+//           console.log(`Earned ${pointsEarned} points for ${user.email}`);
+//         }
+
+//         // Clear cart
+//    await Cart.findOneAndUpdate(
+//   { userId: savedOrder.userId },
+//   {
+//     $set: {
+//       items: [],        // clear all cart items
+//       phone: "",        // clear phone number
+//       email: ""         // clear email
+//     }
+//   }
+// );
+
+//         // await Cart.findOneAndUpdate({ userId: savedOrder.userId }, { $set: { items: [] } });
+//         console.log(`✅ Cleared cart for ${user.email}`);
+//       }
+//     }
+//     }
+
+// // ===== WHATSAPP ORDER MESSAGE =====
+
+ 
+// try {
+//   if ( client && isClientReady) {
+//     const phone = meta.phone || billing.phone || shipping.phone;
+
+//     if (phone) {
+//       let cleanedPhone = phone.replace(/\D/g, ""); // remove all non-digit characters
+
+// // If number already starts with "91" and has 12 digits, keep it
+// if (cleanedPhone.startsWith("91") && cleanedPhone.length === 12) {
+//   cleanedPhone = cleanedPhone;
+// }
+// // If number has only 10 digits, add "91" prefix
+// else if (cleanedPhone.length === 10) {
+//   cleanedPhone = "91" + cleanedPhone;
+// }
+// // (Optional) Handle unexpected formats
+// else {
+//   console.error("Invalid phone number format:", phone);
+// }
+
+// const chatId = `${cleanedPhone}@c.us`;
+
+//       const cartItems = meta.cartItems || [];
+
+//       // 🧾 Header Message
+//       const headerMsg = `
+// 📦 *Your Order Has Been Placed Successfully!*
+// 🧾 *Invoice No:* ${savedOrder.invoiceNumber}
+// 🆔 *Order ID:* ${savedOrder.orderNumber}
+// 🛍️ *Total Items:* ${cartItems.length}
+// 💰 *Total Amount:* ₹${savedOrder.totalAmount}
+// ────────────────────
+// `;
+
+//       await client.sendMessage(chatId, headerMsg.trim());
+//       await new Promise(r => setTimeout(r, 500)); // 0.5s delay
+
+//       // 🛒 Send each cart item
+//       for (const item of cartItems) {
+//         const caption = `
+// 🛒 *${item.title}*
+// 💵 Price: ₹${item.price}
+// 📦 Qty: ${item.quantity}
+// `;
+// console.log("Sending image URL:", item.image);
+
+//         if (item.image) {
+// const baseUrl = process.env.BACKEND_URL; 
+// const imageUrl = `${baseUrl}/${item.image}`; 
+
+// try {
+//   const media = await MessageMedia.fromUrl(imageUrl);
+//   await client.sendMessage(chatId, media, { caption: caption.trim() });
+//   await new Promise(r => setTimeout(r, 500)); 
+// } catch (err) {
+//   console.error(`⚠️ Failed to send image for ${item.title}:`, err.message);
+//   await client.sendMessage(chatId, caption.trim() + "\n⚠️ (Image not available)");
+//   await new Promise(r => setTimeout(r, 500)); 
+// }
+//         } else {
+//           await client.sendMessage(chatId, caption.trim());
+//           await new Promise(r => setTimeout(r, 500)); 
+//         }
+//       }
+
+//       // 🔗 Footer message with tracking link
+//       const trackingUrl = process.env.TRACKING_URL;
+//       const footerMsg = `
+// 🎉 *Thank you for your order!*
+// You can track your order status here 👇
+// 🔗 ${trackingUrl}
+
+// Team *Glowbynjk* 🌸
+// `;
+//       await client.sendMessage(chatId, footerMsg.trim());
+//       await new Promise(r => setTimeout(r, 500)); 
+//       console.log(`✅ WhatsApp order message sent to ${phone}`);
+//     } else {
+//       console.warn("⚠️ No phone number found for WhatsApp message");
+//     }
+//   } else {
+//     console.warn("⚠️ WhatsApp client not ready or payment not successful");
+//   }
+// } catch (whatsappErr) {
+//   console.error("❌ Error sending WhatsApp message:", whatsappErr);
+// }
+
+
+
+
+
+//     // ===== REDIRECT =====
+ 
+ 
+ 
+//     const FRONTEND_URL = process.env.CLIENT_URL;
+//     return res.redirect(
+//       paymentStatus === "Success"
+//         ? `${FRONTEND_URL}/payment-success?order=${savedOrder.orderNumber}`
+//         : `${FRONTEND_URL}/payment-failed?order=${savedOrder.orderNumber}`
+//     );
+
+//   } catch (err) {
+//     console.error("CCAvenue Callback Error:", err);
+//     const FRONTEND_URL = process.env.CLIENT_URL;
+//     return res.redirect(`${FRONTEND_URL}/payment-failed`);
+//   }
+// };
+
+
+
+
+//new code
+
+
+
+//new code
+const placeOrderAfterCCAvenue = async (req, res) => {
   try {
     const {
       userId,
       addressId,
       guestAddress,
-      cartItems,
       totalAmount,
+      cartItems,
       paymentMethod,
       discountAmount,
       giftUsedAmount,
       rewardPoints
     } = req.body;
 
-    // ✅ Generate unique order number
+    // 🔹 Generate order number
     const orderNumber = `${Math.floor(1000 + Math.random() * 9000)}`;
-    const redirectUrl = `${process.env.BACKEND_URL}/api/ccav-response`; 
-    const cancelUrl = `${process.env.BACKEND_URL}/api/ccav-response`;
 
-    // ----------------------------------------
-    // 1️⃣ Prepare billing & shipping details
-    // ----------------------------------------
+    const redirectUrl = `${process.env.BACKEND_URL}/api/ccav-response`;
+    const cancelUrl   = `${process.env.BACKEND_URL}/api/ccav-response`;
+
+    // ===============================
+    // 1️⃣ Prepare billing & shipping
+    // ===============================
     let billing = {};
     let shipping = {};
 
     if (userId && addressId) {
-      const userAddress = await Address.findById(addressId);
-      if (!userAddress)
-        return res.status(400).json({ message: "Address not found" });
+      const address = await Address.findById(addressId);
+      if (!address) return res.status(400).json({ message: "Address not found" });
 
-      billing = userAddress.billing || {};
-      shipping =
-        userAddress.shipToDifferentAddress && userAddress.shipping
-          ? userAddress.shipping
-          : billing;
+      billing = address.billing || {};
+      shipping = address.shipToDifferentAddress && address.shipping
+        ? address.shipping
+        : billing;
+
     } else if (guestAddress) {
       billing = guestAddress.billing || {};
-      shipping =
-        guestAddress.shipToDifferentAddress && guestAddress.shipping
-          ? guestAddress.shipping
-          : billing;
-    } else {
-      return res.status(400).json({ message: "Address information missing" });
+      shipping = guestAddress.shipToDifferentAddress && guestAddress.shipping
+        ? guestAddress.shipping
+        : billing;
     }
 
-    // ----------------------------------------
-    // 2️⃣ Encode merchant_param1 as Base64 JSON
-    // ----------------------------------------
-    const merchantData = {
-      userId,
-      addressId,
-      guestAddress,
+    // ===============================
+    // 2️⃣ CREATE PENDING ORDER (KEY STEP)
+    // ===============================
+  await Order.create({
+      orderNumber,
+      userId: userId || null,
+      addressId: addressId || null,
+      guestAddress: guestAddress || null,
       cartItems,
       totalAmount,
       paymentMethod,
       discountAmount,
       giftUsedAmount,
+      invoiceNumber: await generateInvoiceNumber(),
       rewardPoints,
-      orderNumber
-    };
+      paymentStatus: "Pending",
+      status: "Pending"
+    });
+
+
+
+
+    // ===============================
+    // 3️⃣ merchant_param1 (LIVE SAFE)
+    // ===============================
     const merchant_param1 = Buffer.from(
-      JSON.stringify(merchantData)
+      JSON.stringify({ orderNumber })
     ).toString("base64");
 
-    // ----------------------------------------
-    // 3️⃣ Prepare full CCAvenue data
-    // ----------------------------------------
+    // ===============================
+    // 4️⃣ CCAvenue data
+    // ===============================
     const ccavData = {
       merchant_id: process.env.CCAVENUE_MERCHANT_ID,
       order_id: orderNumber,
       currency: "INR",
-      amount: totalAmount.toFixed(2),
+      amount: Number(totalAmount).toFixed(2),
       redirect_url: redirectUrl,
       cancel_url: cancelUrl,
       language: "EN",
-      merchant_param1: merchant_param1,
+      merchant_param1,
 
-      // Billing info
       billing_name: `${billing.firstName || ""} ${billing.lastName || ""}`.trim(),
-      billing_address: [billing.streetAddress, billing.apartment]
-        .filter(Boolean)
-        .join(", "),
+      billing_address: billing.streetAddress || "",
       billing_city: billing.city || "",
       billing_state: billing.state || "",
       billing_zip: billing.pincode || "",
@@ -354,11 +803,8 @@ function decryptCCAVenue(encText) {
       billing_tel: billing.phone || "",
       billing_email: billing.email || "",
 
-      // Shipping info
       delivery_name: `${shipping.firstName || ""} ${shipping.lastName || ""}`.trim(),
-      delivery_address: [shipping.streetAddress, shipping.apartment]
-        .filter(Boolean)
-        .join(", "),
+      delivery_address: shipping.streetAddress || "",
       delivery_city: shipping.city || "",
       delivery_state: shipping.state || "",
       delivery_zip: shipping.pincode || "",
@@ -367,28 +813,243 @@ function decryptCCAVenue(encText) {
       delivery_email: shipping.email || billing.email || ""
     };
 
-    // ----------------------------------------
-    // 4️⃣ Encrypt data with AES
-    // ----------------------------------------
     const plainText = Object.entries(ccavData)
-      .map(([key, value]) => `${key}=${value}`)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join("&");
+
     const encRequest = encryptCCAVenue(plainText);
 
-    // ----------------------------------------
-    // 5️⃣ Send encrypted response to frontend
-    // ----------------------------------------
-    return res.status(200).json({
+    return res.json({
       success: true,
       orderId: orderNumber,
-      encRequest, // 🔑 frontend uses this for hidden input
-      accessCode: process.env.CCAVENUE_ACCESS_CODE // From .env
+      encRequest,
+      accessCode: process.env.CCAVENUE_ACCESS_CODE
     });
-  } catch (error) {
-    console.error("CCAvenue Checkout Init Error:", error);
-    res.status(500).json({ message: "Failed to initialize CCAvenue payment" });
+
+  } catch (err) {
+    console.error("CCAvenue Init Error:", err);
+    res.status(500).json({ message: "Payment init failed" });
   }
 };
+
+
+const ccavResponse = async (req, res) => {
+  try {
+    const encResp = req.body.encResp;
+    const decrypted = decryptCCAVenue(encResp);
+
+    // ===============================
+    // Parse response
+    // ===============================
+    const response = {};
+    decrypted.split("&").forEach(p => {
+      const i = p.indexOf("=");
+      response[p.substring(0, i)] = decodeURIComponent(p.substring(i + 1));
+    });
+
+    const paymentStatusRaw = response.order_status;
+    const paymentId = response.tracking_id || response.bank_ref_no;
+
+    // ===============================
+    // Decode merchant_param1
+    // ===============================
+    const meta = JSON.parse(
+      Buffer.from(response.merchant_param1, "base64").toString("utf8")
+    );
+
+    // ===============================
+    // Status mapping
+    // ===============================
+    const paymentStatusMap = {
+      Success: "Success",
+      Failure: "Failed",
+      Aborted: "Cancelled"
+    };
+
+    const paymentStatus = paymentStatusMap[paymentStatusRaw] || "Pending";
+
+    // ===============================
+    // Find existing order
+    // ===============================
+    const order = await Order.findOne({ orderNumber: meta.orderNumber });
+
+    if (!order) {
+      return res.redirect(`${process.env.CLIENT_URL}/payment-failed`);
+    }
+
+    // Prevent duplicate callback
+    if (order.paymentStatus === "Success") {
+      return res.redirect(
+        `${process.env.CLIENT_URL}/payment-success?order=${order.orderNumber}`
+      );
+    }
+
+    // ===============================
+    // Update order
+    // ===============================
+    order.paymentStatus = paymentStatus;
+    order.paymentId = paymentId;
+    order.paymentDetails = response;
+    order.status = paymentStatus === "Success" ? "Processing" : "Cancelled";
+
+    await order.save();
+
+
+
+     // ===============================
+    // 6️⃣ Admin Socket Notification
+    // ===============================
+    const io = req.app.get("io");
+    io.emit("newOrder", {
+      orderNumber: order.orderNumber,
+      invoiceNumber: order.invoiceNumber,
+      totalAmount: order.totalAmount,
+      paymentStatus: order.paymentStatus,
+      status: order.status,
+      createdAt: order.updatedAt
+    });
+
+
+    // ===============================
+    // Stock update
+    // ===============================
+    if (paymentStatus === "Success") {
+      for (const item of order.cartItems) {
+        const product = await Product.findById(item.productId);
+        if (product && product.stockQuantity >= item.quantity) {
+          product.stockQuantity -= item.quantity;
+          product.usedQuantity += item.quantity;
+          if (product.stockQuantity <= 0) product.status = "Out of Stock";
+          await product.save();
+        }
+      }
+    }
+
+
+
+    // ===============================
+    // 8️⃣ Reward points (Redeem + Earn)
+    // ===============================
+    let user = null;
+    if (paymentStatus === "Success" && order.userId) {
+      user = await User.findById(order.userId);
+
+      if (user) {
+        // 🔁 Redeem
+        if (order.rewardPoints > 0) {
+          user.rewardPoints = Math.max(
+            0,
+            user.rewardPoints - order.rewardPoints
+          );
+        }
+
+        // ➕ Earn
+        const earnedPoints = Math.floor(order.totalAmount / 1000) * 10;
+        if (earnedPoints > 0) {
+          user.rewardPoints += earnedPoints;
+        }
+
+        await user.save();
+      }
+    }
+
+    // ===============================
+    // Email invoice
+    // ===============================
+    let email = "";
+    if (order.userId) {
+      const user = await User.findById(order.userId);
+      email = user?.email;
+    } else {
+      email = order.guestAddress?.billing?.email;
+    }
+
+    if (paymentStatus === "Success" && email) {
+      await sendOrderEmail(email, order);
+    }
+
+    // ===============================
+    // Clear cart
+    // ===============================
+   // ===============================
+    // 🔟 Clear Cart
+    // ===============================
+    if (paymentStatus === "Success" && order.userId) {
+      await Cart.findOneAndUpdate(
+        { userId: order.userId },
+        { $set: { items: [], phone: "", email: "" } }
+      );
+    }
+
+
+
+    // ===============================
+    // 1️⃣1️⃣ WhatsApp Message
+    // ===============================
+    try {
+      if (client && isClientReady && paymentStatus === "Success") {
+        const phone =
+          order.guestAddress?.billing?.phone ||
+          response.billing_tel ||
+          "";
+
+        if (phone) {
+          let cleanedPhone = phone.replace(/\D/g, "");
+          if (cleanedPhone.length === 10) cleanedPhone = "91" + cleanedPhone;
+
+          const chatId = `${cleanedPhone}@c.us`;
+
+          const headerMsg = `
+📦 *Order Placed Successfully*
+🧾 Invoice: ${order.invoiceNumber}
+🆔 Order ID: ${order.orderNumber}
+💰 Amount: ₹${order.totalAmount}
+────────────────────
+`;
+          await client.sendMessage(chatId, headerMsg.trim());
+
+          for (const item of order.cartItems) {
+            const caption = `
+🛒 *${item.title}*
+💵 ₹${item.price}
+📦 Qty: ${item.quantity}
+`;
+            if (item.image) {
+              const imageUrl = `${process.env.BACKEND_URL}/${item.image}`;
+              const media = await MessageMedia.fromUrl(imageUrl);
+              await client.sendMessage(chatId, media, { caption });
+            } else {
+              await client.sendMessage(chatId, caption.trim());
+            }
+          }
+
+          const footerMsg = `
+🎉 Thank you for shopping with *Glowbynjk*
+🔗 Track order: ${process.env.TRACKING_URL}
+`;
+          await client.sendMessage(chatId, footerMsg.trim());
+        }
+      }
+    } catch (waErr) {
+      console.error("WhatsApp error:", waErr.message);
+    }
+
+    // ===============================
+    // Redirect
+    // ===============================
+    return res.redirect(
+      paymentStatus === "Success"
+        ? `${process.env.CLIENT_URL}/payment-success?order=${order.orderNumber}`
+        : `${process.env.CLIENT_URL}/payment-failed?order=${order.orderNumber}`
+    );
+
+  } catch (err) {
+    console.error("CCAvenue Callback Error:", err);
+    return res.redirect(`${process.env.CLIENT_URL}/payment-failed`);
+  }
+};
+
+
 
 const whatsappsend = async (req, res) => {
 try {
@@ -461,318 +1122,6 @@ Team *Glowbynjk* 🌸
     res.status(500).json({ success: false, error: error.message });
   }
 }
-
-const ccavResponse = async (req, res) => {
-  try {
-    const encResp = req.body.encResp;
-    const decrypted = decryptCCAVenue(encResp);
-
-    // ===== Parse CCAvenue response =====
-    const response = Object.fromEntries(
-      decrypted.split("&").map(p => p.split("="))
-    );
-    const paymentStatusRaw = response.order_status; // Success / Failure / Aborted
-    const paymentId = response.tracking_id || response.bank_ref_no || null;
-    // const orderNumber = Math.floor(1000 + Math.random() * 9000);
-    
-    // ===== Decode merchant_param1 =====
-    let meta = {};
-    try {
-      const decoded = Buffer.from(response.merchant_param1, "base64").toString("utf8");
-      meta = JSON.parse(decoded);
-    } catch (err) {
-      console.error("❌ merchant_param1 JSON parse failed:", err);
-    }
-
-    // ===== Normalize payment status =====
-    const paymentStatusMap = { Success: "Success", Failure: "Failed", Aborted: "Cancelled" };
-    const paymentStatus = paymentStatusMap[paymentStatusRaw] || "Pending";
-
-    const orderStatusMap = { Success: "Processing", Failed: "Pending", Cancelled: "Cancelled" };
-    const status = orderStatusMap[paymentStatus] || "Pending";
-
-    // ===== CREATE ORDER =====
-    const newOrder = new Order({
-       orderNumber : meta.orderNumber, 
-      invoiceNumber: await generateInvoiceNumber(),
-      userId: meta.userId || null,
-      addressId: meta.addressId || null,
-      guestAddress: meta.guestAddress || null,
-      cartItems: meta.cartItems || [],
-      totalAmount: meta.totalAmount || 0,
-      paymentMethod: meta.paymentMethod || "CCAvenue",
-      discountAmount: meta.discountAmount || 0,
-      giftUsedAmount: meta.giftUsedAmount || 0,
-      rewardPoints: meta.rewardPoints || 0,
-      paymentStatus,
-      paymentId,
-      paymentDetails: response,
-      status
-    });
-
-    const savedOrder = await newOrder.save();
-    console.log(`✅ Order saved: ${savedOrder._id}, paymentStatus: ${paymentStatus}, status: ${status}`);
-
-       // 🟢 ===== UPDATE PRODUCT STOCK AFTER SUCCESSFUL PAYMENT =====
-    if (paymentStatus === "Success" && savedOrder.cartItems && savedOrder.cartItems.length > 0) {
-  for (const item of savedOrder.cartItems) {
-    try {
-      const product = await Product.findById(item.productId);
-
-      if (product) {
-        // 🟢 Check stock availability
-        if (product.stockQuantity >= item.quantity) {
-          // Update both stock and used quantity
-          product.stockQuantity -= item.quantity;
-          product.usedQuantity += item.quantity;
-
-          // If stock is zero, mark status as Out of Stock
-          if (product.stockQuantity <= 0) {
-            product.stockQuantity = 0;
-            product.status = "Out of Stock";
-          }
-
-          await product.save();
-
-          console.log(`✅ Updated stock for ${product.title}: 
-              Remaining stock = ${product.stockQuantity}, 
-              Used = ${product.usedQuantity}`);
-        } else {
-          console.warn(`⚠️ Not enough stock for ${product.title} 
-              (requested: ${item.quantity}, available: ${product.stockQuantity})`);
-        }
-      } else {
-        console.warn(`⚠️ Product not found for ID: ${item.productId}`);
-      }
-    } catch (err) {
-      console.error(`❌ Error updating stock for product ${item.productId}:`, err);
-    }
-  }
-}
-
-
-    // ===== Admin dashboard notification via Socket.IO =====
-    const io = req.app.get("io");
-    io.emit("newOrder", {
-      orderNumber: savedOrder.orderNumber,
-      invoiceNumber: savedOrder.invoiceNumber,
-      totalAmount: savedOrder.totalAmount,
-      paymentStatus,
-      userId: savedOrder.userId,
-      createdAt: savedOrder.createdAt,
-    });
-
-    // ===== BILLING & SHIPPING =====
-    let billing = {};
-    let shipping = {};
-
-    // 1️⃣ Logged-in user
-    if (savedOrder.addressId) {
-      const address = await Address.findById(savedOrder.addressId).lean();
-      if (address) {
-        billing = { ...(address.billing || {}) };
-        shipping = { ...(address.shipping || billing) }; // fallback
-      }
-    }
-
-    // 2️⃣ Guest user fallback (only if empty)
-    if (savedOrder.guestAddress) {
-      const guest = savedOrder.guestAddress;
-      if (!billing || Object.keys(billing).length === 0) {
-        billing = { ...(guest.billing || {}) };
-      }
-      if (!shipping || Object.keys(shipping).length === 0) {
-        shipping = { ...(guest.shipping || billing) }; // fallback
-      }
-    }
-
-    billing = billing || {};
-    shipping = shipping || {};
-
-    // Merge into order for PDF/email
-    const order = { ...savedOrder.toObject(), billing, shipping };
-
-    console.log("Billing Address:", billing);
-    console.log("Shipping Address:", shipping);
-
-    // ===== CUSTOMER EMAIL =====
-    let customerEmail = "";
-    if (savedOrder.userId) {
-      const user = await User.findById(savedOrder.userId);
-      if (user) customerEmail = user.email || "";
-    } else if (savedOrder.guestAddress) {
-      customerEmail = billing.email || shipping.email || "";
-    }
-
-    // ===== SEND EMAIL =====
-    if (paymentStatus === "Success" && customerEmail) {
-      try {
-        await sendOrderEmail(customerEmail, order);
-        console.log(`📧 Invoice email sent to ${customerEmail}`);
-      } catch (emailErr) {
-        console.error("❌ Error sending invoice email:", emailErr);
-      }
-    } else {
-      console.warn("⚠️ Skipping email — missing customer email or payment not successful");
-    }
-
-    // ===== REWARD POINTS & CART CLEAR =====
-    if (paymentStatus === "Success") {
-    if (savedOrder.userId) {
-      const user = await User.findById(savedOrder.userId);
-      if (user) {
-        // Redeem points
-        const pointsNeededToRedeem = 10000;
-        const redeemValue = 500; // rupees
-        if (user.rewardPoints >= pointsNeededToRedeem) {
-          const pointsPerRupee = redeemValue / pointsNeededToRedeem;
-          const amountToRedeem = Math.floor(user.rewardPoints * pointsPerRupee);
-          user.rewardPoints = 0;
-          await user.save();
-          console.log(`Redeemed ₹${amountToRedeem} for ${user.email}`);
-        }
-
-        // Earn points
-        const pointsEarned = Math.floor(savedOrder.totalAmount / 1000) * 10;
-        if (pointsEarned > 0) {
-          user.rewardPoints += pointsEarned;
-          await user.save();
-          console.log(`Earned ${pointsEarned} points for ${user.email}`);
-        }
-
-        // Clear cart
-   await Cart.findOneAndUpdate(
-  { userId: savedOrder.userId },
-  {
-    $set: {
-      items: [],        // clear all cart items
-      phone: "",        // clear phone number
-      email: ""         // clear email
-    }
-  }
-);
-
-        // await Cart.findOneAndUpdate({ userId: savedOrder.userId }, { $set: { items: [] } });
-        console.log(`✅ Cleared cart for ${user.email}`);
-      }
-    }
-    }
-
-// ===== WHATSAPP ORDER MESSAGE =====
-
- 
-try {
-  if ( client && isClientReady) {
-    const phone = meta.phone || billing.phone || shipping.phone;
-
-    if (phone) {
-      let cleanedPhone = phone.replace(/\D/g, ""); // remove all non-digit characters
-
-// If number already starts with "91" and has 12 digits, keep it
-if (cleanedPhone.startsWith("91") && cleanedPhone.length === 12) {
-  cleanedPhone = cleanedPhone;
-}
-// If number has only 10 digits, add "91" prefix
-else if (cleanedPhone.length === 10) {
-  cleanedPhone = "91" + cleanedPhone;
-}
-// (Optional) Handle unexpected formats
-else {
-  console.error("Invalid phone number format:", phone);
-}
-
-const chatId = `${cleanedPhone}@c.us`;
-
-      const cartItems = meta.cartItems || [];
-
-      // 🧾 Header Message
-      const headerMsg = `
-📦 *Your Order Has Been Placed Successfully!*
-🧾 *Invoice No:* ${savedOrder.invoiceNumber}
-🆔 *Order ID:* ${savedOrder.orderNumber}
-🛍️ *Total Items:* ${cartItems.length}
-💰 *Total Amount:* ₹${savedOrder.totalAmount}
-────────────────────
-`;
-
-      await client.sendMessage(chatId, headerMsg.trim());
-      await new Promise(r => setTimeout(r, 500)); // 0.5s delay
-
-      // 🛒 Send each cart item
-      for (const item of cartItems) {
-        const caption = `
-🛒 *${item.title}*
-💵 Price: ₹${item.price}
-📦 Qty: ${item.quantity}
-`;
-console.log("Sending image URL:", item.image);
-
-        if (item.image) {
-const baseUrl = process.env.BACKEND_URL; 
-const imageUrl = `${baseUrl}/${item.image}`; 
-
-try {
-  const media = await MessageMedia.fromUrl(imageUrl);
-  await client.sendMessage(chatId, media, { caption: caption.trim() });
-  await new Promise(r => setTimeout(r, 500)); 
-} catch (err) {
-  console.error(`⚠️ Failed to send image for ${item.title}:`, err.message);
-  await client.sendMessage(chatId, caption.trim() + "\n⚠️ (Image not available)");
-  await new Promise(r => setTimeout(r, 500)); 
-}
-        } else {
-          await client.sendMessage(chatId, caption.trim());
-          await new Promise(r => setTimeout(r, 500)); 
-        }
-      }
-
-      // 🔗 Footer message with tracking link
-      const trackingUrl = process.env.TRACKING_URL;
-      const footerMsg = `
-🎉 *Thank you for your order!*
-You can track your order status here 👇
-🔗 ${trackingUrl}
-
-Team *Glowbynjk* 🌸
-`;
-      await client.sendMessage(chatId, footerMsg.trim());
-      await new Promise(r => setTimeout(r, 500)); 
-      console.log(`✅ WhatsApp order message sent to ${phone}`);
-    } else {
-      console.warn("⚠️ No phone number found for WhatsApp message");
-    }
-  } else {
-    console.warn("⚠️ WhatsApp client not ready or payment not successful");
-  }
-} catch (whatsappErr) {
-  console.error("❌ Error sending WhatsApp message:", whatsappErr);
-}
-
-
-
-
-
-    // ===== REDIRECT =====
- 
- 
- 
-    const FRONTEND_URL = process.env.CLIENT_URL;
-    return res.redirect(
-      paymentStatus === "Success"
-        ? `${FRONTEND_URL}/payment-success?order=${savedOrder.orderNumber}`
-        : `${FRONTEND_URL}/payment-failed?order=${savedOrder.orderNumber}`
-    );
-
-  } catch (err) {
-    console.error("CCAvenue Callback Error:", err);
-    const FRONTEND_URL = process.env.CLIENT_URL;
-    return res.redirect(`${FRONTEND_URL}/payment-failed`);
-  }
-};
-
-
-
-
 
 
 
