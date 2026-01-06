@@ -933,25 +933,47 @@ const ccavResponse = async (req, res) => {
     let user = null;
     if (paymentStatus === "Success" && order.userId) {
       user = await User.findById(order.userId);
+      // if (user) {
+      //   if (order.rewardPoints > 0) {
+      //     user.rewardPoints = Math.max(
+      //       0,
+      //       user.rewardPoints - order.rewardPoints
+      //     );
+      //   }
+      //   const earnedPoints = Math.floor(order.totalAmount / 1000) * 10;
+      //   if (earnedPoints > 0) {
+      //     user.rewardPoints += earnedPoints;
+      //   }
 
-      if (user) {
-        // 🔁 Redeem
-        if (order.rewardPoints > 0) {
-          user.rewardPoints = Math.max(
-            0,
-            user.rewardPoints - order.rewardPoints
-          );
+      //   await user.save();
+      // }
+
+       if (user) {
+        // Redeem points
+        const pointsNeededToRedeem = 10000;
+        const redeemValue = 500; // rupees
+        if (user.rewardPoints >= pointsNeededToRedeem) {
+          const pointsPerRupee = redeemValue / pointsNeededToRedeem;
+          const amountToRedeem = Math.floor(user.rewardPoints * pointsPerRupee);
+          user.rewardPoints = 0;
+          await user.save();
+          console.log(`Redeemed ₹${amountToRedeem} for ${user.email}`);
         }
 
-        // ➕ Earn
-        const earnedPoints = Math.floor(order.totalAmount / 1000) * 10;
-        if (earnedPoints > 0) {
-          user.rewardPoints += earnedPoints;
+        // Earn points
+        const pointsEarned = Math.floor(order.totalAmount / 1000) * 10;
+        if (pointsEarned > 0) {
+          user.rewardPoints += pointsEarned;
+          await user.save();
+          console.log(`Earned ${pointsEarned} points for ${user.email}`);
         }
-
-        await user.save();
       }
+
     }
+
+
+  
+
 
     // ===============================
     // Email invoice
